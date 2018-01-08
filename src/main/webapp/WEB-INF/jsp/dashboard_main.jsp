@@ -133,6 +133,44 @@
             });
         }
 
+        var addFavoriteButton = function() {
+          var self = $(this);
+          var test = self.attr('test');
+
+          $.post('/api/favorites', { testName: test}).then(function(data) {
+            if (data.key) {
+              subscriptionMap[test] = data.key;
+
+              self.children().text("star");
+              self.switchClass("add-fav-button", "min-fav-button", 0);
+
+              self.off('click', addFavoriteButton);
+              self.on('click', removeFavoriteButton);
+            }
+          })
+          .fail(function() {
+            alert( "Error occurred on registering your favorite test case!" );
+          });
+        }
+
+        var removeFavoriteButton = function() {
+          var self = $(this);
+          var test = self.attr('test');
+
+          $.ajax({
+            url: '/api/favorites/' + subscriptionMap[test],
+            type: 'DELETE'
+          }).then(function() {
+            delete subscriptionMap[test];
+
+            self.children().text("star_border");
+            self.switchClass("min-fav-button", "add-fav-button", 0);
+
+            self.off('click', removeFavoriteButton);
+            self.on('click', addFavoriteButton);
+          });
+        }
+
         $.widget('custom.sizedAutocomplete', $.ui.autocomplete, {
             _resizeMenu: function() {
                 this.menu.element.outerWidth($('#input-box').width());
@@ -156,6 +194,10 @@
             $('.remove-button').click(removeFavorite);
             $('.notification-button').click(toggleNotifications);
             $('#add-button').click(addFavorite);
+
+            $('.add-fav-button').click(addFavoriteButton);
+
+            $('.min-fav-button').click(removeFavoriteButton);
 
             $('#favoritesLink').click(function() {
                 window.open('/', '_self');
@@ -187,7 +229,7 @@
               </ul>
             </div>
           </div>
-          <c:set var='width' value='${showAll ? 12 : 11}' />
+          <c:set var='width' value='${showAll ? 11 : 11}' />
           <c:if test='${not showAll}'>
             <div class='row'>
               <div class='input-field col s8'>
@@ -214,16 +256,34 @@
                     </span>
                   </div>
                 </a>
-                <c:if test='${not showAll}'>
-                  <div class='col s1 center btn-container'>
-                    <a class='col s6 btn-flat notification-button ${test.muteNotifications ? "inactive" : "active"}' test='${test.name}' title='${test.muteNotifications ? "Enable" : "Disable"} notifications'>
-                      <i class='material-icons'>notifications_${test.muteNotifications ? "off" : "active"}</i>
-                    </a>
-                    <a class='col s6 btn-flat remove-button' test='${test.name}' title='Remove favorite'>
-                      <i class='material-icons'>clear</i>
-                    </a>
-                  </div>
-                </c:if>
+                <c:choose>
+                  <c:when test="${showAll}">
+                    <div class="col s1 center btn-container">
+                      <c:choose>
+                        <c:when test="${test.isFavorite}">
+                          <a class="col s6 btn-flat min-fav-button" test="${test.name}" title="Remove favorite">
+                            <i class="material-icons">star</i>
+                          </a>
+                        </c:when>
+                        <c:otherwise>
+                          <a class="col s6 btn-flat add-fav-button" test="${test.name}" title="Add favorite">
+                            <i class="material-icons">star_border</i>
+                          </a>
+                        </c:otherwise>
+                      </c:choose>
+                    </div>
+                  </c:when>
+                  <c:otherwise>
+                    <div class='col s1 center btn-container'>
+                      <a class='col s6 btn-flat notification-button ${test.muteNotifications ? "inactive" : "active"}' test='${test.name}' title='${test.muteNotifications ? "Enable" : "Disable"} notifications'>
+                        <i class='material-icons'>notifications_${test.muteNotifications ? "off" : "active"}</i>
+                      </a>
+                      <a class='col s6 btn-flat remove-button' test='${test.name}' title='Remove favorite'>
+                        <i class='material-icons'>clear</i>
+                      </a>
+                    </div>
+                  </c:otherwise>
+                </c:choose>
               </div>
             </c:forEach>
           </div>

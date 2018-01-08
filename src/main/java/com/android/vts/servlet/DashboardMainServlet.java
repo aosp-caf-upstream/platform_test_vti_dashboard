@@ -67,6 +67,7 @@ public class DashboardMainServlet extends BaseServlet {
         private final int passCount;
         private final int failCount;
         private boolean muteNotifications;
+        private boolean isFavorite;
 
         /**
          * Test display constructor.
@@ -74,12 +75,16 @@ public class DashboardMainServlet extends BaseServlet {
          * @param testKey The key of the test.
          * @param passCount The number of tests passing.
          * @param failCount The number of tests failing.
+         * @param muteNotifications The flag for user notification in case of test failure.
+         * @param isFavorite The flag for showing favorite mark on All Tests Tab page.
          */
-        public TestDisplay(Key testKey, int passCount, int failCount) {
+        public TestDisplay(Key testKey, int passCount, int failCount, boolean muteNotifications,
+            boolean isFavorite) {
             this.testKey = testKey;
             this.passCount = passCount;
             this.failCount = failCount;
-            this.muteNotifications = false;
+            this.muteNotifications = muteNotifications;
+            this.isFavorite = isFavorite;
         }
 
         /**
@@ -123,6 +128,20 @@ public class DashboardMainServlet extends BaseServlet {
             this.muteNotifications = muteNotifications;
         }
 
+        /**
+         * Get the favorate status.
+         *
+         * @return True if an user set favorate for the test, false otherwise.
+         */
+        public boolean getIsFavorite() {
+            return this.isFavorite;
+        }
+
+        /** Set the favorite status. */
+        public void setIsFavorite(boolean isFavorite) {
+            this.isFavorite = isFavorite;
+        }
+
         @Override
         public int compareTo(TestDisplay test) {
             return this.testKey.getName().compareTo(test.getName());
@@ -158,8 +177,19 @@ public class DashboardMainServlet extends BaseServlet {
         Query query = new Query(TestEntity.KIND).setKeysOnly();
         for (Entity test : datastore.prepare(query).asIterable()) {
             allTestNames.add(test.getKey().getName());
-            unprocessedTestKeys.add(test.getKey());
         }
+
+        List<Key> favoriteKeyList = new ArrayList<Key>();
+        Filter userFilter =
+                new FilterPredicate(
+                        UserFavoriteEntity.USER, FilterOperator.EQUAL, currentUser);
+        Query filterQuery = new Query(UserFavoriteEntity.KIND).setFilter(userFilter);
+        Iterable<Entity> favoriteIter = datastore.prepare(filterQuery).asIterable();
+        favoriteIter.forEach(fe -> {
+            Key testKey = UserFavoriteEntity.fromEntity(fe).testKey;
+            favoriteKeyList.add(testKey);
+            subscriptionMap.put(testKey.getName(), KeyFactory.keyToString(fe.getKey()));
+        });
 
         query =
                 new Query(TestStatusEntity.KIND)
@@ -171,16 +201,12 @@ public class DashboardMainServlet extends BaseServlet {
             TestStatusEntity statusEntity = TestStatusEntity.fromEntity(status);
             if (statusEntity == null) continue;
             Key testKey = KeyFactory.createKey(TestEntity.KIND, statusEntity.testName);
-            if (!unprocessedTestKeys.contains(testKey)) continue;
-            TestDisplay display =
-                    new TestDisplay(testKey, statusEntity.passCount, statusEntity.failCount);
-            testMap.put(testKey, display);
-            unprocessedTestKeys.remove(testKey);
-        }
-
-        // Process tests without statuses
-        for (Key testKey : unprocessedTestKeys) {
-            TestDisplay display = new TestDisplay(testKey, -1, -1);
+            boolean isFavorite = favoriteKeyList.contains(testKey);
+            TestDisplay display = new TestDisplay(testKey, -1, -1, false, isFavorite);
+            if (!unprocessedTestKeys.contains(testKey)) {
+                display = new TestDisplay(testKey, statusEntity.passCount, statusEntity.failCount,
+                    false, isFavorite);
+            }
             testMap.put(testKey, display);
         }
 
@@ -194,12 +220,7 @@ public class DashboardMainServlet extends BaseServlet {
             }
         } else {
             if (testMap.size() > 0) {
-                Filter userFilter =
-                        new FilterPredicate(
-                                UserFavoriteEntity.USER, FilterOperator.EQUAL, currentUser);
-                query = new Query(UserFavoriteEntity.KIND).setFilter(userFilter);
-
-                for (Entity favoriteEntity : datastore.prepare(query).asIterable()) {
+                for (Entity favoriteEntity : favoriteIter) {
                     UserFavoriteEntity favorite = UserFavoriteEntity.fromEntity(favoriteEntity);
                     Key testKey = favorite.testKey;
                     if (!testMap.containsKey(testKey)) {
@@ -208,8 +229,6 @@ public class DashboardMainServlet extends BaseServlet {
                     TestDisplay display = testMap.get(testKey);
                     display.setMuteNotifications(favorite.muteNotifications);
                     displayedTests.add(display);
-                    subscriptionMap.put(
-                            testKey.getName(), KeyFactory.keyToString(favoriteEntity.getKey()));
                 }
             }
         }

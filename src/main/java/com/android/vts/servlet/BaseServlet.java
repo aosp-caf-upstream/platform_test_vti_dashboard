@@ -41,7 +41,7 @@ public abstract class BaseServlet extends HttpServlet {
     protected static final String TREE_DEFAULT_PARAM = "treeDefault";
 
     public enum PageType {
-        TOT("Home", "/"),
+        TOT("Test", "/"),
         RELEASE("Release", "/show_release"),
         COVERAGE_OVERVIEW("Coverage", "/show_coverage_overview"),
         PROFILING_LIST("Profiling", "/show_profiling_list"),

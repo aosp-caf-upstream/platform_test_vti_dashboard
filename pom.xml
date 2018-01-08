@@ -87,7 +87,7 @@
     <dependency>
       <groupId>com.google.api-client</groupId>
       <artifactId>google-api-client</artifactId>
-      <version>1.22.0</version>
+      <version>1.23.0</version>
       <exclusions>
         <exclusion>
           <groupId>com.google.guava</groupId>
@@ -99,13 +99,13 @@
     <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-api-1.0-sdk</artifactId>
-      <version>1.9.54</version>
+      <version>1.9.59</version>
     </dependency>
 
     <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-oauth2</artifactId>
-      <version>v1-rev131-1.22.0</version>
+      <version>v1-rev136-1.23.0</version>
     </dependency>
 
     <!-- Test Dependencies -->
@@ -118,19 +118,19 @@
     <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-testing</artifactId>
-      <version>1.9.54</version>
+      <version>1.9.59</version>
       <scope>test</scope>
     </dependency>
     <dependency>
         <groupId>com.google.appengine</groupId>
         <artifactId>appengine-api-stubs</artifactId>
-        <version>1.9.50</version>
+        <version>1.9.59</version>
         <scope>test</scope>
     </dependency>
     <dependency>
         <groupId>com.google.appengine</groupId>
         <artifactId>appengine-tools-sdk</artifactId>
-        <version>1.9.54</version>
+        <version>1.9.59</version>
         <scope>test</scope>
     </dependency>
 
@@ -172,7 +172,7 @@
       <plugin>
         <groupId>com.google.appengine</groupId>
         <artifactId>appengine-maven-plugin</artifactId>
-        <version>1.9.51</version>
+        <version>1.9.59</version>
       </plugin>
 
     </plugins>
