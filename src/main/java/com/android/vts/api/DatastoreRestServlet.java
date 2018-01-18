@@ -72,7 +72,12 @@ public class DatastoreRestServlet extends HttpServlet {
             Tokeninfo tokenInfo = oauth2.tokeninfo().setAccessToken(accessToken).execute();
             if (tokenInfo.getIssuedTo().equals(SERVICE_CLIENT_ID)) {
                 authorized = true;
+            } else {
+                logger.log(Level.WARNING, "service_client_id didn't match!");
+                logger.log(Level.INFO, "SERVICE_CLIENT_ID => " + tokenInfo.getIssuedTo());
             }
+        } else {
+            logger.log(Level.WARNING, "postMessage do not contain any accessToken!");
         }
 
         if (!authorized) {

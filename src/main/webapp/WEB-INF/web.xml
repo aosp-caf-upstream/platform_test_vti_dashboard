@@ -81,6 +81,11 @@ Copyright 2016 Google Inc. All Rights Reserved.
 </servlet>
 
 <servlet>
+  <servlet-name>test_data</servlet-name>
+  <servlet-class>com.android.vts.api.TestDataForDevServlet</servlet-class>
+</servlet>
+
+<servlet>
   <servlet-name>datastore</servlet-name>
   <servlet-class>com.android.vts.api.DatastoreRestServlet</servlet-class>
 </servlet>
@@ -198,6 +203,11 @@ Copyright 2016 Google Inc. All Rights Reserved.
 <servlet-mapping>
   <servlet-name>bigtable_legacy</servlet-name>
   <url-pattern>/api/bigtable/*</url-pattern>
+</servlet-mapping>
+
+<servlet-mapping>
+  <servlet-name>test_data</servlet-name>
+  <url-pattern>/api/test_data/*</url-pattern>
 </servlet-mapping>
 
 <servlet-mapping>
