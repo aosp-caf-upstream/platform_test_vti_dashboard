@@ -211,6 +211,62 @@
         });
     </script>
     <div class='container wide'>
+
+      <c:if test="${!showAll}">
+        <ul id="guide_collapsible" class="collapsible" data-collapsible="accordion">
+          <li>
+            <div class="collapsible-header">
+              <i class="material-icons">library_books</i>
+              Notice
+              <span class="new badge right" style="position: inherit;">1</span>
+            </div>
+            <div class="collapsible-body">
+              <div class='row'>
+                <div class='col s12' style="margin: 15px 0px 0px 30px;">
+                  <c:choose>
+                    <c:when test="${fn:endsWith(serverName, 'googleplex.com')}">
+                      <c:set var="dataVersion" scope="page" value="new"/>
+                      <c:choose>
+                        <c:when test="${fn:startsWith(serverName, 'android-vts-internal')}">
+                          <c:set var="dataLink" scope="page" value="https://android-vts.appspot.com"/>
+                        </c:when>
+                        <c:when test="${fn:startsWith(serverName, 'android-vts-staging')}">
+                          <c:set var="dataLink" scope="page" value="https://android-vts-staging.appspot.com"/>
+                        </c:when>
+                        <c:otherwise>
+                          <c:set var="dataLink" scope="page" value="https://android-vts-staging.appspot.com"/>
+                        </c:otherwise>
+                      </c:choose>
+                    </c:when>
+                    <c:when test="${fn:endsWith(serverName, 'appspot.com')}">
+                      <c:set var="dataVersion" scope="page" value="previous"/>
+                      <c:choose>
+                        <c:when test="${fn:startsWith(serverName, 'android-vts-staging')}">
+                          <c:set var="dataLink" scope="page" value="https://android-vts-staging.googleplex.com"/>
+                        </c:when>
+                        <c:when test="${fn:startsWith(serverName, 'android-vts')}">
+                          <c:set var="dataLink" scope="page" value="https://android-vts-internal.googleplex.com"/>
+                        </c:when>
+                        <c:otherwise>
+                          <c:set var="dataLink" scope="page" value="https://android-vts-staging.googleplex.com"/>
+                        </c:otherwise>
+                      </c:choose>
+                    </c:when>
+                    <c:otherwise>
+                      <c:set var="dataVersion" scope="page" value="local dev"/>
+                      <c:set var="dataLink" scope="page" value="http://localhost"/>
+                    </c:otherwise>
+                  </c:choose>
+                  Recently, we launched new appspot servers for dashboard. Thus you will have two diffrent versions of server for each staging and production data.
+                  <br/>
+                  If you want to find the <c:out value = "${dataVersion}"/> test data, please visit the next url <a href="<c:out value = "${dataLink}"/>"><c:out value = "${dataLink}"/></a>.
+                </div>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </c:if>
+
       <c:choose>
         <c:when test='${not empty error}'>
           <div id='error-container' class='row card'>
