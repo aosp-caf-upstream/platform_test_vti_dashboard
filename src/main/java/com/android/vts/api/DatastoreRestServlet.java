@@ -25,10 +25,10 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson.JacksonFactory;
 import com.google.api.services.oauth2.Oauth2;
 import com.google.api.services.oauth2.model.Tokeninfo;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -44,26 +44,21 @@ public class DatastoreRestServlet extends HttpServlet {
     public void doPost(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         // Retrieve the params
-        String payload = new String();
         DashboardPostMessage postMessage;
         try {
-            String line = null;
-            BufferedReader reader = request.getReader();
-            while ((line = reader.readLine()) != null) {
-                payload += line;
-            }
+            String payload = request.getReader().lines().collect(Collectors.joining());
             byte[] value = Base64.decodeBase64(payload);
             postMessage = DashboardPostMessage.parseFrom(value);
         } catch (IOException e) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            logger.log(Level.WARNING, "Invalid proto: " + payload);
+            logger.log(Level.WARNING, "Invalid proto: " + e.getLocalizedMessage());
             return;
         }
 
         // Verify service account access token.
-        boolean authorized = false;
         if (postMessage.hasAccessToken()) {
             String accessToken = postMessage.getAccessToken();
+            logger.log(Level.INFO, "accessToken => " + accessToken);
             GoogleCredential credential = new GoogleCredential().setAccessToken(accessToken);
             Oauth2 oauth2 =
                     new Oauth2.Builder(new NetHttpTransport(), new JacksonFactory(), credential)
@@ -71,28 +66,23 @@ public class DatastoreRestServlet extends HttpServlet {
                             .build();
             Tokeninfo tokenInfo = oauth2.tokeninfo().setAccessToken(accessToken).execute();
             if (tokenInfo.getIssuedTo().equals(SERVICE_CLIENT_ID)) {
-                authorized = true;
+                for (TestReportMessage testReportMessage : postMessage.getTestReportList()) {
+                    DatastoreHelper.insertTestReport(testReportMessage);
+                }
+
+                for (TestPlanReportMessage planReportMessage : postMessage.getTestPlanReportList()) {
+                    DatastoreHelper.insertTestPlanReport(planReportMessage);
+                }
+
+                response.setStatus(HttpServletResponse.SC_OK);
             } else {
                 logger.log(Level.WARNING, "service_client_id didn't match!");
                 logger.log(Level.INFO, "SERVICE_CLIENT_ID => " + tokenInfo.getIssuedTo());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             }
         } else {
             logger.log(Level.WARNING, "postMessage do not contain any accessToken!");
-        }
-
-        if (!authorized) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
         }
-
-        for (TestReportMessage testReportMessage : postMessage.getTestReportList()) {
-            DatastoreHelper.insertTestReport(testReportMessage);
-        }
-
-        for (TestPlanReportMessage planReportMessage : postMessage.getTestPlanReportList()) {
-            DatastoreHelper.insertTestPlanReport(planReportMessage);
-        }
-
-        response.setStatus(HttpServletResponse.SC_OK);
     }
 }
