@@ -166,7 +166,7 @@ public abstract class BaseServlet extends HttpServlet {
             request.setAttribute("activeIndex", activeIndex);
             response.setContentType("text/html");
 
-            if (currentUserEmail.endsWith("google.com")) {
+            if (currentUserEmail.endsWith("@google.com")) {
                 doGetHandler(request, response);
             } else {
                 RequestDispatcher dispatcher =

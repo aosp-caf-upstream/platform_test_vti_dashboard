@@ -70,10 +70,10 @@ public class DatastoreHelper {
 
     public static final int MAX_WRITE_RETRIES = 5;
     /**
-     * This variable is for maximum number of entities per transaction
-     * You can find the detail here (https://cloud.google.com/datastore/docs/concepts/limits)
+     * This variable is for maximum number of entities per transaction You can find the detail here
+     * (https://cloud.google.com/datastore/docs/concepts/limits)
      */
-    public static final int MAX_ENTITY_SIZE_PER_TRANSACTION = 100;
+    public static final int MAX_ENTITY_SIZE_PER_TRANSACTION = 300;
 
     protected static final Logger logger = Logger.getLogger(DatastoreHelper.class.getName());
     private static final DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
@@ -387,6 +387,11 @@ public class DatastoreHelper {
                 if (profilingPointKeys.size() > 0) {
                     VtsProfilingStatsJobServlet.addTasks(profilingPointKeys);
                 }
+            } else {
+                logger.log(
+                        Level.WARNING,
+                        "The alert email was not sent as testRunEntity type is not POSTSUBMIT!" +
+                           " \n " + " testRunEntity type => " + testRunEntity.type);
             }
         }
     }
@@ -498,10 +503,12 @@ public class DatastoreHelper {
             Entity entity, List<Entity> entityList, boolean withXG) {
         int retries = 0;
         while (true) {
-            Transaction txn = datastore.beginTransaction();
+            Transaction txn;
             if (withXG) {
                 TransactionOptions options = TransactionOptions.Builder.withXG(withXG);
                 txn = datastore.beginTransaction(options);
+            } else {
+                txn = datastore.beginTransaction();
             }
 
             try {
