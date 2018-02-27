@@ -151,6 +151,8 @@ public abstract class BaseServlet extends HttpServlet {
             boolean treeDefault = request.getParameter(TREE_DEFAULT_PARAM).equals("true");
             session.setAttribute(TREE_DEFAULT_PARAM, treeDefault);
         }
+
+        request.setAttribute("serverName", request.getServerName());
         request.setAttribute("logoutURL", logoutURI);
         request.setAttribute("email", currentUser.getEmail());
         request.setAttribute("analyticsID", new Gson().toJson(ANALYTICS_ID));
