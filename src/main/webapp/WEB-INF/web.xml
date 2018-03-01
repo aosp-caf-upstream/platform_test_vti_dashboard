@@ -86,6 +86,11 @@ Copyright 2016 Google Inc. All Rights Reserved.
 </servlet>
 
 <servlet>
+  <servlet-name>show_gcs_log</servlet-name>
+  <servlet-class>com.android.vts.servlet.ShowGcsLogServlet</servlet-class>
+</servlet>
+
+<servlet>
   <servlet-name>test_data</servlet-name>
   <servlet-class>com.android.vts.api.TestDataForDevServlet</servlet-class>
 </servlet>
@@ -208,6 +213,11 @@ Copyright 2016 Google Inc. All Rights Reserved.
 <servlet-mapping>
   <servlet-name>show_test_acknowledgments</servlet-name>
   <url-pattern>/show_test_acknowledgments/*</url-pattern>
+</servlet-mapping>
+
+<servlet-mapping>
+  <servlet-name>show_gcs_log</servlet-name>
+  <url-pattern>/show_gcs_log/*</url-pattern>
 </servlet-mapping>
 
 <servlet-mapping>
