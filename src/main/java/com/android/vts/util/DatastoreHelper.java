@@ -50,8 +50,11 @@ import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
 import com.google.appengine.api.datastore.Query.FilterPredicate;
 import com.google.appengine.api.datastore.Transaction;
+import com.google.appengine.api.datastore.TransactionOptions;
+import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.List;
@@ -62,8 +65,18 @@ import java.util.logging.Logger;
 
 /** DatastoreHelper, a helper class for interacting with Cloud Datastore. */
 public class DatastoreHelper {
-    protected static final Logger logger = Logger.getLogger(DatastoreHelper.class.getName());
+    /** The default kind name for datastore */
+    public static final String NULL_ENTITY_KIND = "nullEntity";
+
     public static final int MAX_WRITE_RETRIES = 5;
+    /**
+     * This variable is for maximum number of entities per transaction
+     * You can find the detail here (https://cloud.google.com/datastore/docs/concepts/limits)
+     */
+    public static final int MAX_ENTITY_SIZE_PER_TRANSACTION = 100;
+
+    protected static final Logger logger = Logger.getLogger(DatastoreHelper.class.getName());
+    private static final DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
 
     /**
      * Get query fetch options for large batches of entities.
@@ -105,7 +118,6 @@ public class DatastoreHelper {
      */
     public static boolean hasOlder(Key parentKey, String kind, Long upperBound) throws IOException {
         if (upperBound == null || upperBound <= 0) return false;
-        DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
         Key endKey = KeyFactory.createKey(parentKey, kind, upperBound);
         Filter endFilter =
                 new FilterPredicate(Entity.KEY_RESERVED_PROPERTY, FilterOperator.LESS_THAN, endKey);
@@ -119,7 +131,6 @@ public class DatastoreHelper {
      * @return a list of all branches.
      */
     public static List<String> getAllBranches() {
-        DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
         Query query = new Query(BranchEntity.KIND).setKeysOnly();
         List<String> branches = new ArrayList<>();
         for (Entity e : datastore.prepare(query).asIterable(getLargeBatchOptions())) {
@@ -134,7 +145,6 @@ public class DatastoreHelper {
      * @return a list of all device build flavors.
      */
     public static List<String> getAllBuildFlavors() {
-        DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
         Query query = new Query(BuildTargetEntity.KIND).setKeysOnly();
         List<String> devices = new ArrayList<>();
         for (Entity e : datastore.prepare(query).asIterable(getLargeBatchOptions())) {
@@ -149,8 +159,12 @@ public class DatastoreHelper {
      * @param report The test report containing data to upload.
      */
     public static void insertTestReport(TestReportMessage report) {
-        DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
-        Set<Entity> puts = new HashSet<>();
+
+        List<Entity> testEntityList = new ArrayList<>();
+        List<Entity> branchEntityList = new ArrayList<>();
+        List<Entity> buildTargetEntityList = new ArrayList<>();
+        List<Entity> coverageEntityList = new ArrayList<>();
+        List<Entity> profilingPointRunEntityList = new ArrayList<>();
 
         if (!report.hasStartTimestamp()
                 || !report.hasEndTimestamp()
@@ -179,7 +193,6 @@ public class DatastoreHelper {
 
         Set<Key> buildTargetKeys = new HashSet<>();
         Set<Key> branchKeys = new HashSet<>();
-        List<Entity> buildPuts = new ArrayList<>();
         List<TestCaseRunEntity> testCases = new ArrayList<>();
         List<Key> profilingPointKeys = new ArrayList<>();
         List<String> links = new ArrayList<>();
@@ -205,22 +218,23 @@ public class DatastoreHelper {
                         CoverageEntity.fromCoverageReport(testRunKey, testCaseName, coverage);
                 if (coverageEntity == null) {
                     logger.log(Level.WARNING, "Invalid coverage report in test run " + testRunKey);
-                    continue;
+                } else {
+                    coveredLineCount += coverageEntity.coveredLineCount;
+                    totalLineCount += coverageEntity.totalLineCount;
+                    coverageEntityList.add(coverageEntity.toEntity());
                 }
-                coveredLineCount += coverageEntity.coveredLineCount;
-                totalLineCount += coverageEntity.totalLineCount;
-                puts.add(coverageEntity.toEntity());
             }
             // Process profiling data for test case
             for (ProfilingReportMessage profiling : testCase.getProfilingList()) {
-                ProfilingPointRunEntity profilingEntity =
+                ProfilingPointRunEntity profilingPointRunEntity =
                         ProfilingPointRunEntity.fromProfilingReport(testRunKey, profiling);
-                if (profilingEntity == null) {
+                if (profilingPointRunEntity == null) {
                     logger.log(Level.WARNING, "Invalid profiling report in test run " + testRunKey);
+                } else {
+                    profilingPointRunEntityList.add(profilingPointRunEntity.toEntity());
+                    profilingPointKeys.add(profilingPointRunEntity.key);
+                    testEntity.setHasProfilingData(true);
                 }
-                puts.add(profilingEntity.toEntity());
-                profilingPointKeys.add(profilingEntity.key);
-                testEntity.setHasProfilingData(true);
             }
 
             int lastIndex = testCases.size() - 1;
@@ -231,8 +245,6 @@ public class DatastoreHelper {
             TestCaseRunEntity testCaseEntity = testCases.get(lastIndex);
             testCaseEntity.addTestCase(testCaseName, result.getNumber());
         }
-
-        datastore.put(buildPuts);
 
         List<Entity> testCasePuts = new ArrayList<>();
         for (TestCaseRunEntity testCaseEntity : testCases) {
@@ -252,24 +264,23 @@ public class DatastoreHelper {
                     DeviceInfoEntity.fromDeviceInfoMessage(testRunKey, device);
             if (deviceInfoEntity == null) {
                 logger.log(Level.WARNING, "Invalid device info in test run " + testRunKey);
-                continue;
-            }
-
-            // Run type on devices must be the same, else set to OTHER
-            TestRunType runType = TestRunType.fromBuildId(deviceInfoEntity.buildId);
-            if (testRunType == null) {
-                testRunType = runType;
-            } else if (runType != testRunType) {
-                testRunType = TestRunType.OTHER;
-            }
-            puts.add(deviceInfoEntity.toEntity());
-            BuildTargetEntity target = new BuildTargetEntity(deviceInfoEntity.buildFlavor);
-            if (buildTargetKeys.add(target.key)) {
-                buildPuts.add(target.toEntity());
-            }
-            BranchEntity branch = new BranchEntity(deviceInfoEntity.branch);
-            if (branchKeys.add(branch.key)) {
-                buildPuts.add(branch.toEntity());
+            } else {
+                // Run type on devices must be the same, else set to OTHER
+                TestRunType runType = TestRunType.fromBuildId(deviceInfoEntity.buildId);
+                if (testRunType == null) {
+                    testRunType = runType;
+                } else if (runType != testRunType) {
+                    testRunType = TestRunType.OTHER;
+                }
+                testEntityList.add(deviceInfoEntity.toEntity());
+                BuildTargetEntity target = new BuildTargetEntity(deviceInfoEntity.buildFlavor);
+                if (buildTargetKeys.add(target.key)) {
+                    buildTargetEntityList.add(target.toEntity());
+                }
+                BranchEntity branch = new BranchEntity(deviceInfoEntity.branch);
+                if (branchKeys.add(branch.key)) {
+                    branchEntityList.add(branch.toEntity());
+                }
             }
         }
 
@@ -286,34 +297,33 @@ public class DatastoreHelper {
                     CoverageEntity.fromCoverageReport(testRunKey, new String(), coverage);
             if (coverageEntity == null) {
                 logger.log(Level.WARNING, "Invalid coverage report in test run " + testRunKey);
-                continue;
+            } else {
+                coveredLineCount += coverageEntity.coveredLineCount;
+                totalLineCount += coverageEntity.totalLineCount;
+                coverageEntityList.add(coverageEntity.toEntity());
             }
-            coveredLineCount += coverageEntity.coveredLineCount;
-            totalLineCount += coverageEntity.totalLineCount;
-            puts.add(coverageEntity.toEntity());
         }
 
         // Process global profiling data
         for (ProfilingReportMessage profiling : report.getProfilingList()) {
-            ProfilingPointRunEntity profilingEntity =
+            ProfilingPointRunEntity profilingPointRunEntity =
                     ProfilingPointRunEntity.fromProfilingReport(testRunKey, profiling);
-            if (profilingEntity == null) {
+            if (profilingPointRunEntity == null) {
                 logger.log(Level.WARNING, "Invalid profiling report in test run " + testRunKey);
+            } else {
+                profilingPointRunEntityList.add(profilingPointRunEntity.toEntity());
+                profilingPointKeys.add(profilingPointRunEntity.key);
+                testEntity.setHasProfilingData(true);
             }
-            puts.add(profilingEntity.toEntity());
-            profilingPointKeys.add(profilingEntity.key);
-            testEntity.setHasProfilingData(true);
         }
 
         // Process log data
         for (LogMessage log : report.getLogList()) {
-            if (!log.hasUrl()) continue;
-            links.add(log.getUrl().toStringUtf8());
+            if (log.hasUrl()) links.add(log.getUrl().toStringUtf8());
         }
         // Process url resource
         for (UrlResourceMessage resource : report.getLinkResourceList()) {
-            if (!resource.hasUrl()) continue;
-            links.add(resource.getUrl().toStringUtf8());
+            if (resource.hasUrl()) links.add(resource.getUrl().toStringUtf8());
         }
 
         TestRunEntity testRunEntity =
@@ -330,52 +340,52 @@ public class DatastoreHelper {
                         links,
                         coveredLineCount,
                         totalLineCount);
-        puts.add(testRunEntity.toEntity());
+        testEntityList.add(testRunEntity.toEntity());
 
-        int retries = 0;
         Entity test = testEntity.toEntity();
-        while (true) {
-            Transaction txn = datastore.beginTransaction();
-            try {
-                // Check if test already exists in the database
-                try {
-                    Entity oldTest = datastore.get(testEntity.key);
-                    TestEntity oldTestEntity = TestEntity.fromEntity(oldTest);
-                    if (oldTestEntity == null || !oldTestEntity.equals(testEntity)) {
-                        puts.add(test);
-                    }
-                } catch (EntityNotFoundException e) {
-                    puts.add(test);
-                }
-                datastore.put(puts);
-                txn.commit();
 
-                // Add processing tasks to the queue
-                if (testRunEntity.type == TestRunType.POSTSUBMIT) {
-                    VtsAlertJobServlet.addTask(testRunKey);
-                    if (testRunEntity.hasCoverage) {
-                        VtsCoverageAlertJobServlet.addTask(testRunKey);
-                    }
-                    if (profilingPointKeys.size() > 0) {
-                        VtsProfilingStatsJobServlet.addTasks(profilingPointKeys);
-                    }
+        if (datastoreTransactionalRetry(test, testEntityList)) {
+            List<List<Entity>> auxiliaryEntityList =
+                    Arrays.asList(
+                            profilingPointRunEntityList,
+                            coverageEntityList,
+                            branchEntityList,
+                            buildTargetEntityList);
+            int indexCount = 0;
+            for (List<Entity> entityList : auxiliaryEntityList) {
+                switch (indexCount) {
+                    case 0:
+                    case 1:
+                        if (entityList.size() > MAX_ENTITY_SIZE_PER_TRANSACTION) {
+                            List<List<Entity>> partitionedList =
+                                    Lists.partition(entityList, MAX_ENTITY_SIZE_PER_TRANSACTION);
+                            partitionedList.forEach(
+                                    subEntityList -> {
+                                        datastoreTransactionalRetry(
+                                                new Entity(NULL_ENTITY_KIND), subEntityList);
+                                    });
+                        } else {
+                            datastoreTransactionalRetry(new Entity(NULL_ENTITY_KIND), entityList);
+                        }
+                        break;
+                    case 2:
+                    case 3:
+                        datastoreTransactionalRetryWithXG(
+                                new Entity(NULL_ENTITY_KIND), entityList, true);
+                        break;
+                    default:
+                        break;
                 }
-                break;
-            } catch (ConcurrentModificationException
-                    | DatastoreFailureException
-                    | DatastoreTimeoutException e) {
-                puts.remove(test);
-                logger.log(Level.WARNING, "Retrying test run insert: " + test.getKey());
-                if (retries++ >= MAX_WRITE_RETRIES) {
-                    logger.log(Level.SEVERE, "Exceeded maximum test run retries: " + test.getKey());
-                    throw e;
+                indexCount++;
+            }
+
+            if (testRunEntity.type == TestRunType.POSTSUBMIT) {
+                VtsAlertJobServlet.addTask(testRunKey);
+                if (testRunEntity.hasCoverage) {
+                    VtsCoverageAlertJobServlet.addTask(testRunKey);
                 }
-            } finally {
-                if (txn.isActive()) {
-                    logger.log(
-                            Level.WARNING,
-                            "Transaction rollback forced for run: " + testRunEntity.key);
-                    txn.rollback();
+                if (profilingPointKeys.size() > 0) {
+                    VtsProfilingStatsJobServlet.addTasks(profilingPointKeys);
                 }
             }
         }
@@ -387,8 +397,7 @@ public class DatastoreHelper {
      * @param report The test plan report containing data to upload.
      */
     public static void insertTestPlanReport(TestPlanReportMessage report) {
-        DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
-        List<Entity> puts = new ArrayList<>();
+        List<Entity> testEntityList = new ArrayList<>();
 
         List<String> testModules = report.getTestModuleNameList();
         List<Long> testTimes = report.getTestModuleStartTimestampList();
@@ -414,7 +423,7 @@ public class DatastoreHelper {
         long endTimestamp = -1;
         String testBuildId = null;
         TestRunType type = null;
-        Set<DeviceInfoEntity> devices = new HashSet<>();
+        Set<DeviceInfoEntity> deviceInfoEntitySet = new HashSet<>();
         for (Key testRunKey : testRuns.keySet()) {
             TestRunEntity testRun = TestRunEntity.fromEntity(testRuns.get(testRunKey));
             if (testRun == null) {
@@ -440,7 +449,7 @@ public class DatastoreHelper {
                 if (device == null) {
                     continue; // invalid entity
                 }
-                devices.add(device);
+                deviceInfoEntitySet.add(device);
             }
         }
         if (startTimestamp < 0 || testBuildId == null || type == null) {
@@ -460,43 +469,88 @@ public class DatastoreHelper {
                         testRunKeys);
 
         // Create the device infos.
-        for (DeviceInfoEntity device : devices) {
-            puts.add(device.copyWithParent(testPlanRun.key).toEntity());
+        for (DeviceInfoEntity device : deviceInfoEntitySet) {
+            testEntityList.add(device.copyWithParent(testPlanRun.key).toEntity());
         }
-        puts.add(testPlanRun.toEntity());
+        testEntityList.add(testPlanRun.toEntity());
 
+        datastoreTransactionalRetry(testPlanEntity, testEntityList);
+    }
+
+    /**
+     * Datastore Transactional process for data insertion with MAX_WRITE_RETRIES times and withXG of
+     * false value
+     *
+     * @param entity The entity that you want to insert to datastore.
+     * @param entityList The list of entity for using datastore put method.
+     */
+    private static boolean datastoreTransactionalRetry(Entity entity, List<Entity> entityList) {
+        return datastoreTransactionalRetryWithXG(entity, entityList, false);
+    }
+
+    /**
+     * Datastore Transactional process for data insertion with MAX_WRITE_RETRIES times
+     *
+     * @param entity The entity that you want to insert to datastore.
+     * @param entityList The list of entity for using datastore put method.
+     */
+    private static boolean datastoreTransactionalRetryWithXG(
+            Entity entity, List<Entity> entityList, boolean withXG) {
         int retries = 0;
         while (true) {
             Transaction txn = datastore.beginTransaction();
+            if (withXG) {
+                TransactionOptions options = TransactionOptions.Builder.withXG(withXG);
+                txn = datastore.beginTransaction(options);
+            }
+
             try {
                 // Check if test already exists in the database
-                try {
-                    datastore.get(testPlanEntity.getKey());
-                } catch (EntityNotFoundException e) {
-                    puts.add(testPlanEntity);
+                if (!entity.getKind().equalsIgnoreCase(NULL_ENTITY_KIND)) {
+                    try {
+                        if (entity.getKind().equalsIgnoreCase("Test")) {
+                            Entity datastoreEntity = datastore.get(entity.getKey());
+                            TestEntity datastoreTestEntity = TestEntity.fromEntity(datastoreEntity);
+                            if (datastoreTestEntity == null
+                                    || !datastoreTestEntity.equals(entity)) {
+                                entityList.add(entity);
+                            }
+                        } else if (entity.getKind().equalsIgnoreCase("TestPlan")) {
+                            datastore.get(entity.getKey());
+                        } else {
+                            datastore.get(entity.getKey());
+                        }
+                    } catch (EntityNotFoundException e) {
+                        entityList.add(entity);
+                    }
                 }
-                datastore.put(puts);
+                datastore.put(txn, entityList);
                 txn.commit();
                 break;
             } catch (ConcurrentModificationException
                     | DatastoreFailureException
                     | DatastoreTimeoutException e) {
-                puts.remove(testPlanEntity);
-                logger.log(Level.WARNING, "Retrying test plan insert: " + testPlanEntity.getKey());
+                entityList.remove(entity);
+                logger.log(
+                        Level.WARNING,
+                        "Retrying insert kind: " + entity.getKind() + " key: " + entity.getKey());
                 if (retries++ >= MAX_WRITE_RETRIES) {
                     logger.log(
                             Level.SEVERE,
-                            "Exceeded maximum test plan retries: " + testPlanEntity.getKey());
-                    throw e;
+                            "Exceeded maximum retries kind: "
+                                    + entity.getKind()
+                                    + " key: "
+                                    + entity.getKey());
+                    return false;
                 }
             } finally {
                 if (txn.isActive()) {
                     logger.log(
-                            Level.WARNING,
-                            "Transaction rollback forced for plan run: " + testPlanRun.key);
+                            Level.WARNING, "Transaction rollback forced for : " + entity.getKind());
                     txn.rollback();
                 }
             }
         }
+        return true;
     }
 }

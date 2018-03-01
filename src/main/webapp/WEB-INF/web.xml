@@ -26,6 +26,11 @@ Copyright 2016 Google Inc. All Rights Reserved.
 </servlet>
 
 <servlet>
+  <servlet-name>show_green_release</servlet-name>
+  <servlet-class>com.android.vts.servlet.ShowGreenReleaseServlet</servlet-class>
+</servlet>
+
+<servlet>
   <servlet-name>show_coverage_overview</servlet-name>
   <servlet-class>com.android.vts.servlet.ShowCoverageOverviewServlet</servlet-class>
 </servlet>
@@ -143,6 +148,11 @@ Copyright 2016 Google Inc. All Rights Reserved.
 <servlet-mapping>
   <servlet-name>show_release</servlet-name>
   <url-pattern>/show_release/*</url-pattern>
+</servlet-mapping>
+
+<servlet-mapping>
+  <servlet-name>show_green_release</servlet-name>
+  <url-pattern>/show_green_release/*</url-pattern>
 </servlet-mapping>
 
 <servlet-mapping>

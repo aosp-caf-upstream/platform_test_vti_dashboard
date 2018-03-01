@@ -30,10 +30,13 @@ import com.google.appengine.api.datastore.Query.FilterPredicate;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -173,6 +176,25 @@ public class FilterUtil {
         public String getValue() {
             return this.keyString;
         }
+    }
+
+    /**
+     * Get the common elements among multiple collections.
+     *
+     * @param collections The collections containing all sub collections to find common element.
+     * @return The common elements set found from the collections param.
+     */
+    public static <T> Set<T> getCommonElements(Collection<? extends Collection<T>> collections) {
+
+        Set<T> common = new LinkedHashSet<T>();
+        if (!collections.isEmpty()) {
+            Iterator<? extends Collection<T>> iterator = collections.iterator();
+            common.addAll(iterator.next());
+            while (iterator.hasNext()) {
+                common.retainAll(iterator.next());
+            }
+        }
+        return common;
     }
 
     /**
