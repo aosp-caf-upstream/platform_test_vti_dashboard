@@ -89,6 +89,114 @@ $ mvn appengine:update
 
 visit https://<YOUR-PROJECT-NAME>.appspot.com
 
+## Update config file through gcloud command
+
+You can deploy or update GAE's a config file without deploying the whole project.
+The next commands show how to do it.
+
+```
+gcloud app deploy --project=<YOUR-PROJECT-NAME> cron.xml
+gcloud app deploy --project=<YOUR-PROJECT-NAME> queue.xml
+gcloud app deploy --project=<YOUR-PROJECT-NAME> datastore-indexes.xml
+```
+
+## Test Data
+
+### Purpose
+
+When you start your local GAE server, you will see empty page as the local datastore do not have any data.
+So we need to put some sample data into local datastore so that developers are able to continue to
+develop new features or fix bugs. Thus, we developed the next two test APIs, which are only available
+in your local dev environment.
+
+```
+http://127.0.0.1:8080/api/test_data/report
+http://127.0.0.1:8080/api/test_data/plan
+```
+
+### How to set test data on json files for generating mock data on local dev server
+
+If you want to generate some mock data for your local development, you need to set some fake data
+on json files under the testdata folder. However, you need to abide by some rules in doing this,
+otherwise you will end up with errors from the mock data dev API.
+
+First, in test-plan-report-data.json, you need to set the same number of data under "testCaseNames"
+and "results". For example, if you put 5 elements of data in "testCaseNames", you should put the same
+number of data under "results".
+
+```json
+........
+"testCaseRunList": [
+  {
+    "testCaseNames": [
+      "stdatomic.atomic_exchange_64bit",
+      "stdatomic.atomic_compare_exchange_64bit",
+      "stdatomic.atomic_exchange_64bit",
+      "stdatomic.atomic_compare_exchange_64bit",
+      "stdatomic.atomic_exchange_64bit",
+      "stdatomic.atomic_compare_exchange_64bit"
+    ],
+    "results": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  }
+],
+........
+```
+
+Second, in test-report-data.json file, you need to make sure that "testModules" should have
+the "testName"'s value under "testRunList" and the "testTimes" should have the "startTimestamp"'s value
+in the test-report-data.json file.
+
+test-report-data.json
+```json
+......
+  "testRunList": [
+    {
+      "testName": "BionicUnitTests", <- "testModules" should be copied from here
+      "type": 1,
+      "startTimestamp":1515562811, <- "testTimes" should be copied from here
+......
+    {
+      "testName": "CpuProfilingTest", <- "testModules" should be copied from here
+      "type": 2,
+      "startTimestamp":1515562811, <- "testTimes" should be copied from here
+......
+```
+
+test-plan-report-data.json
+```json
+......
+  {
+    "testPlanName": "vts-serving-staging-fuzz",
+    "testModules": ["BionicUnitTests", "CpuProfilingTest"],
+    "testTimes": [1515562811, 1515562811]
+  },
+  {
+    "testPlanName": "vts-serving-staging-hal-conventional",
+    "testModules": ["BionicUnitTests", "CpuProfilingTest"],
+    "testTimes": [1515562811, 1515562811]
+  }
+......
+```
+"testModules" and "testTimes"'s elements order is also matter.
+
+### Command to generate mock data through API
+
+The next two commands will generate mock data in your local dev datastore.
+The execution order of the commands is very important, otherwise you can't find some of the data in your local datastore.
+Thus, please execute the below command as I wrote in order.
+
+```
+curl -d @testdata/test-report-data.json -m 30 -X POST http://127.0.0.1:8080/api/test_data/report -H "Content-Type: application/json" --verbose
+curl -d @testdata/test-plan-report-data.json -m 30 -X POST http://127.0.0.1:8080/api/test_data/plan -H "Content-Type: application/json" --verbose
+```
+
 ## Monitoring
 
 The following steps list how to create a monitoring service for the VTS Dashboard.

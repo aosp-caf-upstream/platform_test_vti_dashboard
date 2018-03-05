@@ -37,7 +37,7 @@
 
       $(document).ready(function() {
           $('#test-results-container').showTests(${testRuns}, true);
-          search = $('#filter-bar').createSearchHeader('Coverage', '', refresh);
+          search = $('#filter-bar').createSearchHeader('Code Coverage', '', refresh);
           search.addFilter('Branch', 'branch', {
             corpus: ${branches}
           }, ${branch});
@@ -183,14 +183,14 @@
         <div class='col s4 valign-wrapper'>
           <!-- pie chart -->
           <div class='pie-chart-wrapper col s12 valign center-align card'>
-            <h6 class='pie-chart-title'>Coverage (Raw)</h6>
+            <h6 class='pie-chart-title'>Line Coverage (Raw)</h6>
             <div id='pie-chart-coverage-raw' class='pie-chart-div'></div>
           </div>
         </div>
         <div class='col s4 valign-wrapper'>
           <!-- pie chart -->
           <div class='pie-chart-wrapper col s12 valign center-align card'>
-            <h6 class='pie-chart-title'>Coverage (Normalized)</h6>
+            <h6 class='pie-chart-title'>Line Coverage (Normalized)</h6>
             <div id='pie-chart-coverage-normalized' class='pie-chart-div'></div>
           </div>
         </div>
