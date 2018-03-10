@@ -21,6 +21,8 @@ import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Query;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -50,7 +52,6 @@ public class ShowReleaseServlet extends BaseServlet {
     @Override
     public void doGetHandler(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
-        RequestDispatcher dispatcher = null;
         DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
 
         Set<String> planSet = new HashSet<>();
@@ -64,8 +65,9 @@ public class ShowReleaseServlet extends BaseServlet {
         plans.sort(Comparator.naturalOrder());
 
         response.setStatus(HttpServletResponse.SC_OK);
+        request.setAttribute("isAdmin", UserServiceFactory.getUserService().isUserAdmin());
         request.setAttribute("planNames", plans);
-        dispatcher = request.getRequestDispatcher(RELEASE_JSP);
+        RequestDispatcher dispatcher = request.getRequestDispatcher(RELEASE_JSP);
         try {
             dispatcher.forward(request, response);
         } catch (ServletException e) {
