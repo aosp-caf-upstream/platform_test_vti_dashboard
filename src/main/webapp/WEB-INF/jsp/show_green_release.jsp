@@ -40,7 +40,6 @@
           <thead>
             <tr>
               <th>Branch</th>
-              <th>Device</th>
               <th>Last Finished Build</th>
               <th>Last Green Build</th>
             </tr>
@@ -51,52 +50,39 @@
             <tr>
               <td> <c:out value="${branchList.key}"></c:out> </td>
               <td>
-                <c:forEach varStatus="deviceLoop" var="deviceList" items="${greenBuildInfo[branchList.key]}">
-                  <p> <c:out value="${deviceList.key}"></c:out> </p>
-                  <br/>
-                  <c:if test="${!deviceLoop.last}">
-                    <hr/>
-                  </c:if>
-                </c:forEach>
-              </td>
-              <td>
-                <c:forEach varStatus="deviceLoop" var="deviceList" items="${greenBuildInfo[branchList.key]}">
-                  <c:forEach varStatus="deviceBuildLoop" var="deviceBuildInfo" items="${deviceList.value}">
-                    <p>
-                      <c:out value="${deviceBuildInfo.deviceBuildTarget}"></c:out> :
-                      <c:choose>
-                        <c:when test="${deviceBuildInfo.candidateBuildId eq 'No Test Results'}">
+                <c:forEach varStatus="deviceLoop" var="deviceBuildInfo" items="${branchList.value}">
+                  <p>
+                    <c:out value="${deviceBuildInfo.deviceBuildTarget}"></c:out> :
+                    <c:choose>
+                      <c:when test="${deviceBuildInfo.candidateBuildId eq 'No Test Results'}">
+                        <c:out value="${deviceBuildInfo.candidateBuildId}"></c:out>
+                      </c:when>
+                      <c:otherwise>
+                        <a href="/show_plan_run?plan=${plan}&time=${deviceBuildInfo.candidateBuildIdTimestamp}">
                           <c:out value="${deviceBuildInfo.candidateBuildId}"></c:out>
-                        </c:when>
-                        <c:otherwise>
-                          <a href="/show_plan_run?plan=${plan}&time=${deviceBuildInfo.candidateBuildIdTimestamp}">
-                            <c:out value="${deviceBuildInfo.candidateBuildId}"></c:out>
-                          </a>
-                        </c:otherwise>
-                      </c:choose>
-                    </p>
-                  </c:forEach>
+                        </a>
+                      </c:otherwise>
+                    </c:choose>
+                  </p>
                   <c:if test="${!deviceLoop.last}">
                     <hr/>
                   </c:if>
                 </c:forEach>
               </td>
               <td>
-                <c:forEach varStatus="deviceLoop" var="deviceList" items="${greenBuildInfo[branchList.key]}">
-                  <c:forEach varStatus="deviceBuildLoop" var="deviceBuildInfo" items="${deviceList.value}">
-                    <p>
-                      <c:choose>
-                        <c:when test="${deviceBuildInfo.greenBuildId eq 'N/A'}">
+                <c:forEach varStatus="deviceLoop" var="deviceBuildInfo" items="${branchList.value}">
+                  <p>
+                    <c:choose>
+                      <c:when test="${deviceBuildInfo.greenBuildId eq 'N/A'}">
+                        <c:out value="${deviceBuildInfo.greenBuildId}"></c:out>
+                      </c:when>
+                      <c:otherwise>
+                        <a href="/show_plan_run?plan=${plan}&time=${deviceBuildInfo.greenBuildIdTimestamp}">
                           <c:out value="${deviceBuildInfo.greenBuildId}"></c:out>
-                        </c:when>
-                        <c:otherwise>
-                          <a href="/show_plan_run?plan=${plan}&time=${deviceBuildInfo.greenBuildIdTimestamp}">
-                            <c:out value="${deviceBuildInfo.greenBuildId}"></c:out>
-                          </a>
-                        </c:otherwise>
-                      </c:choose>
-                    </p>
-                  </c:forEach>
+                        </a>
+                      </c:otherwise>
+                    </c:choose>
+                  </p>
                   <c:if test="${!deviceLoop.last}">
                     <hr/>
                   </c:if>

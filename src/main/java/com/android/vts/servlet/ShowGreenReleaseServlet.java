@@ -16,7 +16,6 @@
 
 package com.android.vts.servlet;
 
-import com.android.vts.entity.DeviceInfoEntity;
 import com.android.vts.entity.TestPlanEntity;
 import com.android.vts.entity.TestPlanRunEntity;
 import com.android.vts.util.FilterUtil;
@@ -26,33 +25,23 @@ import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.Query.Filter;
-import com.google.appengine.api.datastore.Query.FilterOperator;
-import com.google.appengine.api.datastore.Query.FilterPredicate;
 import com.google.appengine.api.datastore.Query.SortDirection;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.commons.lang.StringUtils;
 
 public class ShowGreenReleaseServlet extends BaseServlet {
     private static final String PLAN_RELEASE_JSP = "WEB-INF/jsp/show_green_release.jsp";
@@ -104,9 +93,7 @@ public class ShowGreenReleaseServlet extends BaseServlet {
             return this.candidateBuildId;
         }
 
-        /**
-         * Set the candidate build ID.
-         */
+        /** Set the candidate build ID. */
         public void setCandidateBuildId(String candidateBuildId) {
             this.candidateBuildId = candidateBuildId;
         }
@@ -120,9 +107,7 @@ public class ShowGreenReleaseServlet extends BaseServlet {
             return this.candidateBuildIdTimestamp;
         }
 
-        /**
-         * Set the candidate build ID timestamp.
-         */
+        /** Set the candidate build ID timestamp. */
         public void setCandidateBuildIdTimestamp(Long candidateBuildIdTimestamp) {
             this.candidateBuildIdTimestamp = candidateBuildIdTimestamp;
         }
@@ -136,13 +121,10 @@ public class ShowGreenReleaseServlet extends BaseServlet {
             return this.greenBuildId;
         }
 
-        /**
-         * Set the green build ID.
-         */
+        /** Set the green build ID. */
         public void setGreenBuildId(String greenBuildId) {
             this.greenBuildId = greenBuildId;
         }
-
 
         /**
          * Get the candidate build ID timestamp.
@@ -153,9 +135,7 @@ public class ShowGreenReleaseServlet extends BaseServlet {
             return this.greenBuildIdTimestamp;
         }
 
-        /**
-         * Set the candidate build ID timestamp.
-         */
+        /** Set the candidate build ID timestamp. */
         public void setGreenBuildIdTimestamp(Long greenBuildIdTimestamp) {
             this.greenBuildIdTimestamp = greenBuildIdTimestamp;
         }
@@ -184,23 +164,21 @@ public class ShowGreenReleaseServlet extends BaseServlet {
         return links;
     }
 
-    // This function will build and return basic parameter HashMap based on parameter information and
+    // This function will build and return basic parameter HashMap based on parameter information
+    // and
     // this value will also be used on green build page to show the basic structure.
-    private Map<String, Map<String, List<DeviceBuildInfo>>> getBasicParamMap(
-        Map<String, Map<String, List<String>>> param
-    ) {
-        Map<String, Map<String, List<DeviceBuildInfo>>> basicParamMap = new HashMap<>();
-        param.forEach((branch, productObj) -> {
-            Map<String, List<DeviceBuildInfo>> productMap = new HashMap<>();
-            productObj.forEach((product, buildTargetList) -> {
-                List<DeviceBuildInfo> deviceBuildTargetList = new ArrayList<>();
-                buildTargetList.forEach(buildTargetName -> {
-                    deviceBuildTargetList.add(new DeviceBuildInfo(buildTargetName, "N/A"));
+    private Map<String, List<DeviceBuildInfo>> getBasicParamMap(Map<String, List<String>> param) {
+        Map<String, List<DeviceBuildInfo>> basicParamMap = new HashMap<>();
+        param.forEach(
+                (branch, buildTargetList) -> {
+                    List<DeviceBuildInfo> deviceBuildTargetList = new ArrayList<>();
+                    buildTargetList.forEach(
+                            buildTargetName -> {
+                                deviceBuildTargetList.add(
+                                        new DeviceBuildInfo(buildTargetName, "N/A"));
+                            });
+                    basicParamMap.put(branch, deviceBuildTargetList);
                 });
-                productMap.put(product, deviceBuildTargetList);
-            });
-            basicParamMap.put(branch, productMap);
-        });
         return basicParamMap;
     }
 
@@ -209,141 +187,179 @@ public class ShowGreenReleaseServlet extends BaseServlet {
             throws IOException {
         DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
 
-        Map<String, Map<String, List<String>>> paramInfoMap =
-            new HashMap<String, Map<String, List<String>>>() {{
-                put("master", new HashMap<String, List<String>>()
-                    {{
-                        put("pixel", Arrays.asList("sailfish-userdebug", "marlin-userdebug"));
-                    }}
-                );
-                put("oc-mr1", new HashMap<String, List<String>>()
-                    {{
-                        put("pixel", Arrays.asList("sailfish-userdebug", "marlin-userdebug"));
-                        put("pixel 2", Arrays.asList("taimen-userdebug", "walleye-userdebug"));
-                        put("other", Arrays.asList("aosp_arm_a-userdebug"));
-                    }}
-                );
-                put("oc", new HashMap<String, List<String>>()
-                    {{
-                        put("pixel", Arrays.asList("sailfish-userdebug", "marlin-userdebug"));
-                    }}
-                );
-            }};
+        Map<String, List<String>> paramInfoMap =
+                new HashMap<String, List<String>>() {
+                    {
+                        put("master", Arrays.asList("sailfish-userdebug", "marlin-userdebug"));
+                        put(
+                                "oc-mr1",
+                                Arrays.asList(
+                                        "sailfish-userdebug",
+                                        "marlin-userdebug",
+                                        "taimen-userdebug",
+                                        "walleye-userdebug",
+                                        "aosp_arm_a-userdebug"));
+                        put("oc", Arrays.asList("sailfish-userdebug", "marlin-userdebug"));
+                    }
+                };
 
         String testPlan = request.getParameter("plan");
 
-        Map<String, Map<String, List<DeviceBuildInfo>>> baseParamMap = getBasicParamMap(paramInfoMap);
-        baseParamMap.forEach((branchKey, deviceObj) -> {
-            List<List<String>> allPassIdLists = new ArrayList<>();
-            Map<String, List<TestPlanRunEntity>> allTestPlanRunEntityMap = new HashMap<>();
-            logger.log(Level.INFO, "branch name => " + branchKey);
-            deviceObj.forEach((deviceName, deviceBuildInfoList) -> {
-                deviceBuildInfoList.forEach(deviceBuildInfo -> {
+        Map<String, List<DeviceBuildInfo>> baseParamMap = getBasicParamMap(paramInfoMap);
+        baseParamMap.forEach(
+                (branchKey, deviceBuildInfoList) -> {
+                    List<List<String>> allPassIdLists = new ArrayList<>();
+                    Map<String, List<TestPlanRunEntity>> allTestPlanRunEntityMap = new HashMap<>();
+                    deviceBuildInfoList.forEach(
+                            deviceBuildInfo -> {
+                                Map<String, Object> paramMap =
+                                        new HashMap<String, Object>() {
+                                            {
+                                                put("branch", new String[] {branchKey});
+                                                put(
+                                                        "device",
+                                                        new String[] {
+                                                            deviceBuildInfo.getDeviceBuildTarget()
+                                                        });
+                                            }
+                                        };
 
-                    Map<String, Object> paramMap = new HashMap<String, Object>()
-                    {{
-                        put("branch", new String[]{branchKey});
-                        put("device", new String[]{deviceBuildInfo.getDeviceBuildTarget()});
-                        put("nonpassing", new String[]{"0"});
-                    }};
+                                Calendar cal = Calendar.getInstance();
+                                cal.add(Calendar.DATE, -7);
+                                Long startTime = cal.getTime().getTime() * 1000;
+                                Long endTime = Calendar.getInstance().getTime().getTime() * 1000;
 
-                    Calendar cal = Calendar.getInstance();
-                    cal.add(Calendar.DATE, -7);
-                    Long startTime = cal.getTime().getTime() * 1000;
-                    Long endTime = Calendar.getInstance().getTime().getTime() * 1000;
+                                SortDirection dir = SortDirection.DESCENDING;
 
-                    logger.log(Level.INFO, "startTime => " + startTime);
-                    logger.log(Level.INFO, "endTime => " + endTime);
+                                boolean unfiltered = false;
+                                boolean showPresubmit = false;
+                                boolean showPostsubmit = true;
+                                Filter typeFilter =
+                                        FilterUtil.getTestTypeFilter(
+                                                showPresubmit, showPostsubmit, unfiltered);
+                                Key testPlanKey =
+                                        KeyFactory.createKey(TestPlanEntity.KIND, testPlan);
+                                Filter testPlanRunFilter =
+                                        FilterUtil.getTimeFilter(
+                                                testPlanKey,
+                                                TestPlanRunEntity.KIND,
+                                                startTime,
+                                                endTime,
+                                                typeFilter);
 
-                    SortDirection dir = SortDirection.DESCENDING;
+                                List<Filter> userTestFilters =
+                                        FilterUtil.getUserTestFilters(paramMap);
+                                userTestFilters.add(0, testPlanRunFilter);
+                                Filter userDeviceFilter = FilterUtil.getUserDeviceFilter(paramMap);
 
-                    boolean unfiltered = false;
-                    boolean showPresubmit = false;
-                    boolean showPostsubmit = true;
-                    Filter typeFilter = FilterUtil.getTestTypeFilter(
-                            showPresubmit,
-                            showPostsubmit,
-                            unfiltered
-                    );
-                    Key testPlanKey = KeyFactory.createKey(TestPlanEntity.KIND, testPlan);
-                    Filter testPlanRunFilter =
-                        FilterUtil.getTimeFilter(
-                            testPlanKey, TestPlanRunEntity.KIND, startTime, endTime, typeFilter
-                        );
+                                List<Key> matchingKeyList =
+                                        FilterUtil.getMatchingKeys(
+                                                testPlanKey,
+                                                TestPlanRunEntity.KIND,
+                                                userTestFilters,
+                                                userDeviceFilter,
+                                                dir,
+                                                MAX_RUNS_PER_PAGE);
 
-                    List<Filter> userTestFilters = FilterUtil.getUserTestFilters(paramMap);
-                    userTestFilters.add(0, testPlanRunFilter);
-                    Filter userDeviceFilter = FilterUtil.getUserDeviceFilter(paramMap);
+                                logger.log(
+                                        Level.INFO,
+                                        "the number of matching key => " + matchingKeyList.size());
+                                if (matchingKeyList.size() > 0) {
+                                    Map<Key, Entity> entityMap = datastore.get(matchingKeyList);
 
-                    List<Key> matchingKeyList =
-                        FilterUtil.getMatchingKeys(
-                            testPlanKey, TestPlanRunEntity.KIND, userTestFilters,
-                            userDeviceFilter, dir, MAX_RUNS_PER_PAGE
-                        );
+                                    List<TestPlanRunEntity> testPlanRunEntityList =
+                                            entityMap
+                                                    .values()
+                                                    .stream()
+                                                    .map(
+                                                            entity ->
+                                                                    TestPlanRunEntity.fromEntity(
+                                                                            entity))
+                                                    .collect(Collectors.toList());
 
-                    logger.log(Level.INFO, "the number of matching key => " + matchingKeyList.size());
-                    if (matchingKeyList.size() > 0) {
-                        Map<Key, Entity> entityMap = datastore.get(matchingKeyList);
+                                    allTestPlanRunEntityMap.put(
+                                            branchKey
+                                                    + "-"
+                                                    + deviceBuildInfo.getDeviceBuildTarget(),
+                                            testPlanRunEntityList);
 
-                        List<TestPlanRunEntity> testPlanRunEntityList = entityMap.values().stream()
-                            .map(entity -> TestPlanRunEntity.fromEntity(entity))
-                            .collect(Collectors.toList());
+                                    // The passBuildIdList containing all passed buildId List for device
+                                    List<String> passBuildIdList = testPlanRunEntityList.stream()
+                                          .filter(entity -> entity.failCount == 0L)
+                                          .map(entity -> entity.testBuildId)
+                                          .collect(Collectors.toList());
+                                    allPassIdLists.add(passBuildIdList);
+                                    logger.log(Level.INFO, "passBuildIdList => " + passBuildIdList);
 
-                        allTestPlanRunEntityMap.put(
-                            deviceName + "-" + deviceBuildInfo.getDeviceBuildTarget(),
-                            testPlanRunEntityList
-                        );
+                                    // The logic for candidate build ID is starting from here
+                                    Comparator<TestPlanRunEntity> byPassing =
+                                            Comparator.comparingLong(
+                                                    elemFirst -> elemFirst.passCount);
 
-                        // The passBuildIdList containing all passed buildId List for device
-                        List<String> passBuildIdList = testPlanRunEntityList.stream()
-                            .map(entity -> entity.testBuildId)
-                            .collect(Collectors.toList());
-                        allPassIdLists.add(passBuildIdList);
+                                    Comparator<TestPlanRunEntity> byNonPassing =
+                                            Comparator.comparingLong(
+                                                    elemFirst -> elemFirst.failCount);
 
-                        // The logic for candidate build ID is starting from here
-                        Comparator<TestPlanRunEntity> byPassing = Comparator
-                            .comparingLong(elemFirst -> elemFirst.passCount);
+                                    // This will get the TestPlanRunEntity having maximum number of
+                                    // passing and minimum number of fail
+                                    Optional<TestPlanRunEntity> testPlanRunEntity =
+                                            testPlanRunEntityList
+                                                    .stream()
+                                                    .sorted(
+                                                            byPassing
+                                                                    .reversed()
+                                                                    .thenComparing(byNonPassing))
+                                                    .findFirst();
 
-                        Comparator<TestPlanRunEntity> byNonPassing = Comparator
-                            .comparingLong(elemFirst -> elemFirst.failCount);
-
-                        // This will get the TestPlanRunEntity having maximum number of passing and
-                        // minimum number of fail
-                        Optional<TestPlanRunEntity> testPlanRunEntity = testPlanRunEntityList.stream()
-                            .sorted(byPassing.reversed().thenComparing(byNonPassing)).findFirst();
-
-                        String buildId = testPlanRunEntity.map(entity -> entity.testBuildId).orElse("");
-                        deviceBuildInfo.setCandidateBuildId(buildId);
-                        Long buildIdTimestamp = testPlanRunEntity.map(entity -> {
-                            return entity.startTimestamp;
-                        }).orElse(0L);
-                        deviceBuildInfo.setCandidateBuildIdTimestamp(buildIdTimestamp);
-                        logger.log(Level.INFO, "passBuildIdList => " + passBuildIdList);
-                    } else {
-                        allPassIdLists.add(new ArrayList<>());
-                        deviceBuildInfo.setCandidateBuildId("No Test Results");
+                                    String buildId =
+                                            testPlanRunEntity
+                                                    .map(entity -> entity.testBuildId)
+                                                    .orElse("");
+                                    deviceBuildInfo.setCandidateBuildId(buildId);
+                                    Long buildIdTimestamp =
+                                            testPlanRunEntity
+                                                    .map(
+                                                            entity -> {
+                                                                return entity.startTimestamp;
+                                                            })
+                                                    .orElse(0L);
+                                    deviceBuildInfo.setCandidateBuildIdTimestamp(buildIdTimestamp);
+                                } else {
+                                    allPassIdLists.add(new ArrayList<>());
+                                    deviceBuildInfo.setCandidateBuildId("No Test Results");
+                                }
+                            });
+                    Set<String> greenBuildIdList = FilterUtil.getCommonElements(allPassIdLists);
+                    if (greenBuildIdList.size() > 0) {
+                        String greenBuildId = greenBuildIdList.iterator().next();
+                        deviceBuildInfoList.forEach(
+                                deviceBuildInfo -> {
+                                    // This is to get the timestamp for greenBuildId
+                                    Optional<TestPlanRunEntity> testPlanRunEntity =
+                                            allTestPlanRunEntityMap
+                                                    .get(
+                                                            branchKey
+                                                                    + "-"
+                                                                    + deviceBuildInfo
+                                                                            .getDeviceBuildTarget())
+                                                    .stream()
+                                                    .filter(
+                                                            entity ->
+                                                                    entity.testBuildId
+                                                                            .equalsIgnoreCase(
+                                                                                    greenBuildId))
+                                                    .findFirst();
+                                    // Setting the greenBuildId value and timestamp to
+                                    // deviceBuildInfo object
+                                    deviceBuildInfo.setGreenBuildId(greenBuildId);
+                                    Long buildIdTimestamp =
+                                            testPlanRunEntity
+                                                    .map(entity -> entity.startTimestamp)
+                                                    .orElse(0L);
+                                    deviceBuildInfo.setGreenBuildIdTimestamp(buildIdTimestamp);
+                                });
                     }
                 });
-            });
-            Set<String> greenBuildIdList = FilterUtil.getCommonElements(allPassIdLists);
-            if (greenBuildIdList.size() > 0) {
-                String greenBuildId = greenBuildIdList.iterator().next();
-                deviceObj.forEach((deviceName, deviceBuildInfoList) -> {
-                    deviceBuildInfoList.forEach(deviceBuildInfo -> {
-                        // This is to get the timestamp for greenBuildId
-                        Optional<TestPlanRunEntity> testPlanRunEntity = allTestPlanRunEntityMap
-                            .get(deviceName + "-" + deviceBuildInfo.getDeviceBuildTarget()).stream()
-                            .filter(entity -> entity.testBuildId.equalsIgnoreCase(greenBuildId))
-                            .findFirst();
-                        // Setting the greenBuildId value and timestamp to deviceBuildInfo object
-                        deviceBuildInfo.setGreenBuildId(greenBuildId);
-                        Long buildIdTimestamp = testPlanRunEntity.map(entity -> entity.startTimestamp)
-                            .orElse(0L);
-                        deviceBuildInfo.setGreenBuildIdTimestamp(buildIdTimestamp);
-                    });
-                });
-            }
-        });
 
         request.setAttribute("plan", request.getParameter("plan"));
         request.setAttribute("greenBuildInfo", baseParamMap);

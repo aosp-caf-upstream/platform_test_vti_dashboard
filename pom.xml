@@ -23,6 +23,10 @@
   <artifactId>vts-dashboard</artifactId>
 
   <properties>
+    <app.id>s~google.com:android-vts-staging</app.id>
+    <app.version>4</app.version>
+    <appengine.version>1.9.62</appengine.version>
+
     <appengine.clientID></appengine.clientID>
     <appengine.serviceClientID></appengine.serviceClientID>
     <appengine.senderEmail></appengine.senderEmail>
@@ -31,6 +35,10 @@
     <gerrit.uri></gerrit.uri>
     <gerrit.scope></gerrit.scope>
     <analytics.id></analytics.id>
+
+    <gcs.projectID></gcs.projectID>
+    <gcs.keyFile></gcs.keyFile>
+    <gcs.bucketName></gcs.bucketName>
 
     <maven.compiler.target>1.8</maven.compiler.target>
     <maven.compiler.source>1.8</maven.compiler.source>
@@ -99,7 +107,7 @@
     <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-api-1.0-sdk</artifactId>
-      <version>1.9.60</version>
+      <version>${appengine.version}</version>
     </dependency>
 
     <dependency>
@@ -118,19 +126,19 @@
     <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-testing</artifactId>
-      <version>1.9.60</version>
+      <version>${appengine.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
         <groupId>com.google.appengine</groupId>
         <artifactId>appengine-api-stubs</artifactId>
-        <version>1.9.60</version>
+        <version>${appengine.version}</version>
         <scope>test</scope>
     </dependency>
     <dependency>
         <groupId>com.google.appengine</groupId>
         <artifactId>appengine-tools-sdk</artifactId>
-        <version>1.9.60</version>
+        <version>${appengine.version}</version>
         <scope>test</scope>
     </dependency>
 
@@ -172,7 +180,11 @@
       <plugin>
         <groupId>com.google.appengine</groupId>
         <artifactId>appengine-maven-plugin</artifactId>
-        <version>1.9.60</version>
+        <version>${appengine.version}</version>
+        <configuration>
+          <appId>${app.id}</appId>
+          <version>${app.version}</version>
+        </configuration>
       </plugin>
 
     </plugins>

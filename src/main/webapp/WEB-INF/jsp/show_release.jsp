@@ -30,13 +30,29 @@
       </div>
       <div class='row' id='options'>
         <c:forEach items='${planNames}' var='plan'>
-          <div>
-            <a href='/show_plan_release?plan=${plan}'>
-              <div class='col s12 card hoverable option valign-wrapper waves-effect'>
-                <span class='entry valign'>${plan}</span>
+          <c:choose>
+            <c:when test="${isAdmin}">
+              <div class="col s11 center">
+                <a href='/show_plan_release?plan=${plan}'>
+                  <div class='col s12 card hoverable option valign-wrapper waves-effect'>
+                    <span class='entry valign'>${plan}</span>
+                  </div>
+                </a>
               </div>
-            </a>
-          </div>
+              <div class="col s1 center btn-container" style="margin-top: 9px;">
+                <a href='/show_green_release?plan=${plan}' class="waves-effect waves-light btn">Green</a>
+              </div>
+            </c:when>
+            <c:otherwise>
+              <div class="col s12 center">
+                <a href='/show_plan_release?plan=${plan}'>
+                  <div class='col s12 card hoverable option valign-wrapper waves-effect'>
+                    <span class='entry valign'>${plan}</span>
+                  </div>
+                </a>
+              </div>
+            </c:otherwise>
+          </c:choose>
         </c:forEach>
       </div>
     </div>
